@@ -2,32 +2,33 @@
 @description('Azure location where resources should be deployed (e.g., westeurope)')
 param location string = 'westeurope'
 
-param prefix string = 'apimst2o'
+param prefix string = 'apimanagement'
+param suffix string = '01'
 
 // Shared parameters
-param logAnalyticsWorkspaceName string = '${prefix}-loganalytics-${uniqueString(resourceGroup().id)}'
-param appInsightsName string = '${prefix}-appinsights-${uniqueString(resourceGroup().id)}'
+param logAnalyticsWorkspaceName string = 'la-${prefix}-${suffix}'
+param appInsightsName string = 'appinsights-${prefix}-${suffix}'
 
 // Network parameters
-param apimIpAddressName string = '${prefix}-public-ip-apim-${uniqueString(resourceGroup().id)}'
-param vnetName string = '${prefix}-vnet-${uniqueString(resourceGroup().id)}'
-param vnetAddressPrefix string = '10.0.0.0/16'
+param apimIpAddressName string = 'pip-${prefix}-${suffix}'
+param vnetName string = 'vnet-${prefix}-${suffix}'
+param vnetAddressPrefix string = '10.224.100.0/24'
 param subnetApimName string = 'apim'
-param subnetApimPrefix string = '10.0.1.0/26'
+param subnetApimPrefix string = '10.224.101.0/26'
 param subnetPrivateEndpointsName string = 'private-endpoints'
-param subnetPrivateEndpointsPrefix string = '10.0.2.0/24'
-param nsgApimName string = '${prefix}-nsg-apim-${uniqueString(resourceGroup().id)}'
+param subnetPrivateEndpointsPrefix string = '10.224.102.0/26'
+param nsgApimName string = 'nsg-apim-${prefix}-${suffix}'
 
 // API Management parameters
-param apimName string = '${prefix}-apim-${uniqueString(resourceGroup().id)}'
+param apimName string = 'apim-${prefix}-${suffix}'
 param skuName string = 'StandardV2'
 param capacity int = 1
 param publisherEmail string = 'apim@contoso.com'
 param publisherName string = 'Contoso'
 
 // Private Endpoints parameters
-param apimPrivateEndpointName string = '${prefix}-apim-private-endpoint'
-param apimPrivateLinkName string = '${prefix}-apim-private-link'
+param apimPrivateEndpointName string = 'apim-pe-${prefix}-${suffix}'
+param apimPrivateLinkName string = 'apim-pl-${prefix}-${suffix}'
 
 module sharedModule './shared.bicep' = {
   name: 'sharedModule'
