@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.34.44.8038",
-      "templateHash": "6892327314736153957"
+      "templateHash": "9038193992714503035"
     }
   },
   "parameters": {
@@ -50,7 +50,7 @@
     },
     "subnetApimPrefix": {
       "type": "string",
-      "defaultValue": "10.224.100.64/26"
+      "defaultValue": "10.224.100.0/26"
     },
     "subnetPrivateEndpointsName": {
       "type": "string",
@@ -58,7 +58,7 @@
     },
     "subnetPrivateEndpointsPrefix": {
       "type": "string",
-      "defaultValue": "10.224.100.128/26"
+      "defaultValue": "10.224.100.64/26"
     },
     "nsgApimName": {
       "type": "string",
