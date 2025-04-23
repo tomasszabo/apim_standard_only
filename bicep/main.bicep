@@ -3,7 +3,7 @@
 param location string = 'westeurope'
 
 param prefix string = 'apimanagement'
-param suffix string = '01'
+param suffix string = '02'
 
 // Shared parameters
 param logAnalyticsWorkspaceName string = 'la-${prefix}-${suffix}'

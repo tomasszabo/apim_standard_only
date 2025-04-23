@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.34.44.8038",
-      "templateHash": "9109440008244321319"
+      "templateHash": "18127986904041271836"
     }
   },
   "parameters": {
@@ -22,7 +22,7 @@
     },
     "suffix": {
       "type": "string",
-      "defaultValue": "01"
+      "defaultValue": "02"
     },
     "logAnalyticsWorkspaceName": {
       "type": "string",
