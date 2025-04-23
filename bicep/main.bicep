@@ -14,9 +14,9 @@ param apimIpAddressName string = 'pip-${prefix}-${suffix}'
 param vnetName string = 'vnet-${prefix}-${suffix}'
 param vnetAddressPrefix string = '10.224.100.0/24'
 param subnetApimName string = 'apim'
-param subnetApimPrefix string = '10.224.101.0/26'
+param subnetApimPrefix string = '10.224.100.64/26'
 param subnetPrivateEndpointsName string = 'private-endpoints'
-param subnetPrivateEndpointsPrefix string = '10.224.102.0/26'
+param subnetPrivateEndpointsPrefix string = '10.224.100.128/26'
 param nsgApimName string = 'nsg-apim-${prefix}-${suffix}'
 
 // API Management parameters
