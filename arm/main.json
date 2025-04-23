@@ -1,0 +1,760 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "metadata": {
+    "_generator": {
+      "name": "bicep",
+      "version": "0.34.44.8038",
+      "templateHash": "6858557729026734863"
+    }
+  },
+  "parameters": {
+    "location": {
+      "type": "string",
+      "defaultValue": "westeurope",
+      "metadata": {
+        "description": "Azure location where resources should be deployed (e.g., westeurope)"
+      }
+    },
+    "prefix": {
+      "type": "string",
+      "defaultValue": "apimanagement"
+    },
+    "suffix": {
+      "type": "string",
+      "defaultValue": "01"
+    },
+    "logAnalyticsWorkspaceName": {
+      "type": "string",
+      "defaultValue": "[format('la-{0}-{1}', parameters('prefix'), parameters('suffix'))]"
+    },
+    "appInsightsName": {
+      "type": "string",
+      "defaultValue": "[format('appinsights-{0}-{1}', parameters('prefix'), parameters('suffix'))]"
+    },
+    "apimIpAddressName": {
+      "type": "string",
+      "defaultValue": "[format('pip-{0}-{1}', parameters('prefix'), parameters('suffix'))]"
+    },
+    "vnetName": {
+      "type": "string",
+      "defaultValue": "[format('vnet-{0}-{1}', parameters('prefix'), parameters('suffix'))]"
+    },
+    "vnetAddressPrefix": {
+      "type": "string",
+      "defaultValue": "10.224.100.0/24"
+    },
+    "subnetApimName": {
+      "type": "string",
+      "defaultValue": "apim"
+    },
+    "subnetApimPrefix": {
+      "type": "string",
+      "defaultValue": "10.224.101.0/26"
+    },
+    "subnetPrivateEndpointsName": {
+      "type": "string",
+      "defaultValue": "private-endpoints"
+    },
+    "subnetPrivateEndpointsPrefix": {
+      "type": "string",
+      "defaultValue": "10.224.102.0/26"
+    },
+    "nsgApimName": {
+      "type": "string",
+      "defaultValue": "[format('nsg-apim-{0}-{1}', parameters('prefix'), parameters('suffix'))]"
+    },
+    "apimName": {
+      "type": "string",
+      "defaultValue": "[format('apim-{0}-{1}', parameters('prefix'), parameters('suffix'))]"
+    },
+    "skuName": {
+      "type": "string",
+      "defaultValue": "StandardV2"
+    },
+    "capacity": {
+      "type": "int",
+      "defaultValue": 1
+    },
+    "publisherEmail": {
+      "type": "string",
+      "defaultValue": "apim@contoso.com"
+    },
+    "publisherName": {
+      "type": "string",
+      "defaultValue": "Contoso"
+    },
+    "apimPrivateEndpointName": {
+      "type": "string",
+      "defaultValue": "[format('apim-pe-{0}-{1}', parameters('prefix'), parameters('suffix'))]"
+    },
+    "apimPrivateLinkName": {
+      "type": "string",
+      "defaultValue": "[format('apim-pl-{0}-{1}', parameters('prefix'), parameters('suffix'))]"
+    }
+  },
+  "resources": [
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2022-09-01",
+      "name": "sharedModule",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "location": {
+            "value": "[parameters('location')]"
+          },
+          "logAnalyticsWorkspaceName": {
+            "value": "[parameters('logAnalyticsWorkspaceName')]"
+          },
+          "appInsightsName": {
+            "value": "[parameters('appInsightsName')]"
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.34.44.8038",
+              "templateHash": "9827119939338557717"
+            }
+          },
+          "parameters": {
+            "location": {
+              "type": "string"
+            },
+            "logAnalyticsWorkspaceName": {
+              "type": "string"
+            },
+            "appInsightsName": {
+              "type": "string"
+            }
+          },
+          "resources": [
+            {
+              "type": "Microsoft.OperationalInsights/workspaces",
+              "apiVersion": "2021-06-01",
+              "name": "[parameters('logAnalyticsWorkspaceName')]",
+              "location": "[parameters('location')]",
+              "properties": {
+                "retentionInDays": 30,
+                "features": {
+                  "searchVersion": 1
+                },
+                "sku": {
+                  "name": "PerGB2018"
+                }
+              }
+            },
+            {
+              "type": "Microsoft.Insights/components",
+              "apiVersion": "2020-02-02",
+              "name": "[parameters('appInsightsName')]",
+              "location": "[parameters('location')]",
+              "kind": "web",
+              "properties": {
+                "Application_Type": "web",
+                "WorkspaceResourceId": "[resourceId('Microsoft.OperationalInsights/workspaces', parameters('logAnalyticsWorkspaceName'))]"
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.OperationalInsights/workspaces', parameters('logAnalyticsWorkspaceName'))]"
+              ]
+            }
+          ],
+          "outputs": {
+            "appInsightsName": {
+              "type": "string",
+              "value": "[parameters('appInsightsName')]"
+            },
+            "appInsightsId": {
+              "type": "string",
+              "value": "[resourceId('Microsoft.Insights/components', parameters('appInsightsName'))]"
+            },
+            "appInsightsInstrumentationKey": {
+              "type": "string",
+              "value": "[reference(resourceId('Microsoft.Insights/components', parameters('appInsightsName')), '2020-02-02').InstrumentationKey]"
+            }
+          }
+        }
+      }
+    },
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2022-09-01",
+      "name": "networkModule",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "location": {
+            "value": "[parameters('location')]"
+          },
+          "apimIpAddressName": {
+            "value": "[parameters('apimIpAddressName')]"
+          },
+          "vnetName": {
+            "value": "[parameters('vnetName')]"
+          },
+          "vnetAddressPrefix": {
+            "value": "[parameters('vnetAddressPrefix')]"
+          },
+          "subnetApimName": {
+            "value": "[parameters('subnetApimName')]"
+          },
+          "subnetApimPrefix": {
+            "value": "[parameters('subnetApimPrefix')]"
+          },
+          "subnetPrivateEndpointsName": {
+            "value": "[parameters('subnetPrivateEndpointsName')]"
+          },
+          "subnetPrivateEndpointsPrefix": {
+            "value": "[parameters('subnetPrivateEndpointsPrefix')]"
+          },
+          "nsgApimName": {
+            "value": "[parameters('nsgApimName')]"
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.34.44.8038",
+              "templateHash": "16777805258744961945"
+            }
+          },
+          "parameters": {
+            "location": {
+              "type": "string"
+            },
+            "apimIpAddressName": {
+              "type": "string"
+            },
+            "vnetName": {
+              "type": "string"
+            },
+            "vnetAddressPrefix": {
+              "type": "string"
+            },
+            "subnetApimName": {
+              "type": "string"
+            },
+            "subnetApimPrefix": {
+              "type": "string"
+            },
+            "subnetPrivateEndpointsName": {
+              "type": "string"
+            },
+            "subnetPrivateEndpointsPrefix": {
+              "type": "string"
+            },
+            "nsgApimName": {
+              "type": "string"
+            }
+          },
+          "resources": [
+            {
+              "type": "Microsoft.Network/publicIPAddresses",
+              "apiVersion": "2023-02-01",
+              "name": "[parameters('apimIpAddressName')]",
+              "location": "[parameters('location')]",
+              "sku": {
+                "name": "Standard"
+              },
+              "properties": {
+                "publicIPAddressVersion": "IPv4",
+                "publicIPAllocationMethod": "Static",
+                "dnsSettings": {
+                  "domainNameLabel": "[parameters('apimIpAddressName')]"
+                }
+              }
+            },
+            {
+              "type": "Microsoft.Network/networkSecurityGroups",
+              "apiVersion": "2023-02-01",
+              "name": "[parameters('nsgApimName')]",
+              "location": "[parameters('location')]",
+              "properties": {
+                "securityRules": [
+                  {
+                    "name": "AllowInternetInbound",
+                    "properties": {
+                      "sourceAddressPrefix": "Internet",
+                      "sourcePortRange": "*",
+                      "destinationAddressPrefix": "VirtualNetwork",
+                      "destinationPortRange": "443",
+                      "protocol": "*",
+                      "access": "Allow",
+                      "priority": 100,
+                      "direction": "Inbound"
+                    }
+                  },
+                  {
+                    "name": "AllowAPIMInbound",
+                    "properties": {
+                      "sourceAddressPrefix": "ApiManagement",
+                      "sourcePortRange": "*",
+                      "destinationAddressPrefix": "VirtualNetwork",
+                      "destinationPortRange": "3443",
+                      "protocol": "*",
+                      "access": "Allow",
+                      "priority": 110,
+                      "direction": "Inbound"
+                    }
+                  },
+                  {
+                    "name": "AllowAzureLoadBalancerInbound",
+                    "properties": {
+                      "sourceAddressPrefix": "AzureLoadBalancer",
+                      "sourcePortRange": "*",
+                      "destinationAddressPrefix": "VirtualNetwork",
+                      "destinationPortRange": "6390",
+                      "protocol": "*",
+                      "access": "Allow",
+                      "priority": 120,
+                      "direction": "Inbound"
+                    }
+                  },
+                  {
+                    "name": "AllowStorageOutbound",
+                    "properties": {
+                      "sourceAddressPrefix": "VirtualNetwork",
+                      "sourcePortRange": "*",
+                      "destinationAddressPrefix": "Storage",
+                      "destinationPortRange": "443",
+                      "protocol": "*",
+                      "access": "Allow",
+                      "priority": 100,
+                      "direction": "Outbound"
+                    }
+                  },
+                  {
+                    "name": "AllowSqlOutbound",
+                    "properties": {
+                      "sourceAddressPrefix": "VirtualNetwork",
+                      "sourcePortRange": "*",
+                      "destinationAddressPrefix": "Sql",
+                      "destinationPortRange": "1433",
+                      "protocol": "*",
+                      "access": "Allow",
+                      "priority": 110,
+                      "direction": "Outbound"
+                    }
+                  },
+                  {
+                    "name": "AllowKeyVaultOutbound",
+                    "properties": {
+                      "sourceAddressPrefix": "VirtualNetwork",
+                      "sourcePortRange": "*",
+                      "destinationAddressPrefix": "AzureKeyVault",
+                      "destinationPortRange": "443",
+                      "protocol": "*",
+                      "access": "Allow",
+                      "priority": 120,
+                      "direction": "Outbound"
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "type": "Microsoft.Network/virtualNetworks",
+              "apiVersion": "2023-02-01",
+              "name": "[parameters('vnetName')]",
+              "location": "[parameters('location')]",
+              "properties": {
+                "addressSpace": {
+                  "addressPrefixes": [
+                    "[parameters('vnetAddressPrefix')]"
+                  ]
+                },
+                "subnets": [
+                  {
+                    "name": "[parameters('subnetApimName')]",
+                    "properties": {
+                      "addressPrefix": "[parameters('subnetApimPrefix')]",
+                      "networkSecurityGroup": {
+                        "id": "[resourceId('Microsoft.Network/networkSecurityGroups', parameters('nsgApimName'))]"
+                      },
+                      "delegations": [
+                        {
+                          "name": "apimDelegation",
+                          "properties": {
+                            "serviceName": "Microsoft.Web/serverFarms"
+                          }
+                        }
+                      ]
+                    }
+                  },
+                  {
+                    "name": "[parameters('subnetPrivateEndpointsName')]",
+                    "properties": {
+                      "addressPrefix": "[parameters('subnetPrivateEndpointsPrefix')]"
+                    }
+                  }
+                ]
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Network/networkSecurityGroups', parameters('nsgApimName'))]"
+              ]
+            }
+          ],
+          "outputs": {
+            "vnetName": {
+              "type": "string",
+              "value": "[parameters('vnetName')]"
+            },
+            "vnetId": {
+              "type": "string",
+              "value": "[resourceId('Microsoft.Network/virtualNetworks', parameters('vnetName'))]"
+            },
+            "apimIpAddressId": {
+              "type": "string",
+              "value": "[resourceId('Microsoft.Network/publicIPAddresses', parameters('apimIpAddressName'))]"
+            },
+            "subnetApimId": {
+              "type": "string",
+              "value": "[reference(resourceId('Microsoft.Network/virtualNetworks', parameters('vnetName')), '2023-02-01').subnets[0].id]"
+            },
+            "subnetPrivateEndpointsId": {
+              "type": "string",
+              "value": "[reference(resourceId('Microsoft.Network/virtualNetworks', parameters('vnetName')), '2023-02-01').subnets[1].id]"
+            }
+          }
+        }
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Resources/deployments', 'sharedModule')]"
+      ]
+    },
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2022-09-01",
+      "name": "apimModule",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "location": {
+            "value": "[parameters('location')]"
+          },
+          "subnetApimId": {
+            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'networkModule'), '2022-09-01').outputs.subnetApimId.value]"
+          },
+          "publicIpAddressId": {
+            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'networkModule'), '2022-09-01').outputs.apimIpAddressId.value]"
+          },
+          "appInsightsName": {
+            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'sharedModule'), '2022-09-01').outputs.appInsightsName.value]"
+          },
+          "appInsightsId": {
+            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'sharedModule'), '2022-09-01').outputs.appInsightsId.value]"
+          },
+          "appInsightsInstrumentationKey": {
+            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'sharedModule'), '2022-09-01').outputs.appInsightsInstrumentationKey.value]"
+          },
+          "apimName": {
+            "value": "[parameters('apimName')]"
+          },
+          "skuName": {
+            "value": "[parameters('skuName')]"
+          },
+          "capacity": {
+            "value": "[parameters('capacity')]"
+          },
+          "publisherEmail": {
+            "value": "[parameters('publisherEmail')]"
+          },
+          "publisherName": {
+            "value": "[parameters('publisherName')]"
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.34.44.8038",
+              "templateHash": "14934570454147446027"
+            }
+          },
+          "parameters": {
+            "location": {
+              "type": "string"
+            },
+            "subnetApimId": {
+              "type": "string"
+            },
+            "publicIpAddressId": {
+              "type": "string"
+            },
+            "appInsightsName": {
+              "type": "string"
+            },
+            "appInsightsId": {
+              "type": "string"
+            },
+            "appInsightsInstrumentationKey": {
+              "type": "string"
+            },
+            "apimName": {
+              "type": "string"
+            },
+            "skuName": {
+              "type": "string"
+            },
+            "capacity": {
+              "type": "int"
+            },
+            "publisherEmail": {
+              "type": "string"
+            },
+            "publisherName": {
+              "type": "string"
+            }
+          },
+          "resources": [
+            {
+              "type": "Microsoft.ApiManagement/service",
+              "apiVersion": "2023-03-01-preview",
+              "name": "[parameters('apimName')]",
+              "location": "[parameters('location')]",
+              "sku": {
+                "capacity": "[parameters('capacity')]",
+                "name": "[parameters('skuName')]"
+              },
+              "identity": {
+                "type": "SystemAssigned"
+              },
+              "properties": {
+                "virtualNetworkType": "External",
+                "publisherEmail": "[parameters('publisherEmail')]",
+                "publisherName": "[parameters('publisherName')]",
+                "publicIpAddressId": "[parameters('publicIpAddressId')]",
+                "virtualNetworkConfiguration": {
+                  "subnetResourceId": "[parameters('subnetApimId')]"
+                },
+                "publicNetworkAccess": "Disabled",
+                "privateEndpointConnections": [
+                  {
+                    "name": "apimPrivateEndpoint",
+                    "properties": {
+                      "privateLinkServiceConnectionState": {
+                        "status": "Approved",
+                        "description": "Approved by Bicep template"
+                      }
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "type": "Microsoft.ApiManagement/service/loggers",
+              "apiVersion": "2023-03-01-preview",
+              "name": "[format('{0}/{1}', parameters('apimName'), parameters('appInsightsName'))]",
+              "properties": {
+                "loggerType": "applicationInsights",
+                "resourceId": "[parameters('appInsightsId')]",
+                "credentials": {
+                  "instrumentationKey": "[parameters('appInsightsInstrumentationKey')]"
+                }
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.ApiManagement/service', parameters('apimName'))]"
+              ]
+            },
+            {
+              "type": "Microsoft.ApiManagement/service/diagnostics",
+              "apiVersion": "2023-03-01-preview",
+              "name": "[format('{0}/{1}', parameters('apimName'), 'applicationinsights')]",
+              "properties": {
+                "loggerId": "[resourceId('Microsoft.ApiManagement/service/loggers', parameters('apimName'), parameters('appInsightsName'))]",
+                "alwaysLog": "allErrors",
+                "sampling": {
+                  "percentage": 100,
+                  "samplingType": "fixed"
+                }
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.ApiManagement/service', parameters('apimName'))]",
+                "[resourceId('Microsoft.ApiManagement/service/loggers', parameters('apimName'), parameters('appInsightsName'))]"
+              ]
+            }
+          ],
+          "outputs": {
+            "apimName": {
+              "type": "string",
+              "value": "[parameters('apimName')]"
+            },
+            "apimId": {
+              "type": "string",
+              "value": "[resourceId('Microsoft.ApiManagement/service', parameters('apimName'))]"
+            },
+            "apimFQDN": {
+              "type": "string",
+              "value": "[replace(reference(resourceId('Microsoft.ApiManagement/service', parameters('apimName')), '2023-03-01-preview').gatewayUrl, 'https://', '')]"
+            }
+          }
+        }
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Resources/deployments', 'networkModule')]",
+        "[resourceId('Microsoft.Resources/deployments', 'sharedModule')]"
+      ]
+    },
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2022-09-01",
+      "name": "privateEndpointsModule",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "location": {
+            "value": "[parameters('location')]"
+          },
+          "vnetId": {
+            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'networkModule'), '2022-09-01').outputs.vnetId.value]"
+          },
+          "subnetPrivateEndpointsId": {
+            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'networkModule'), '2022-09-01').outputs.subnetPrivateEndpointsId.value]"
+          },
+          "endpoints": {
+            "value": [
+              {
+                "privateEndpoint": "[parameters('apimPrivateEndpointName')]",
+                "privateLink": "[parameters('apimPrivateLinkName')]",
+                "dnsZoneName": "privatelink.azure-api.net",
+                "groupIds": [
+                  "Gateway"
+                ],
+                "serviceId": "[reference(resourceId('Microsoft.Resources/deployments', 'apimModule'), '2022-09-01').outputs.apimId.value]"
+              }
+            ]
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.34.44.8038",
+              "templateHash": "7243462093951540618"
+            }
+          },
+          "parameters": {
+            "location": {
+              "type": "string"
+            },
+            "vnetId": {
+              "type": "string"
+            },
+            "subnetPrivateEndpointsId": {
+              "type": "string"
+            },
+            "endpoints": {
+              "type": "array"
+            }
+          },
+          "resources": [
+            {
+              "copy": {
+                "name": "privateEndpoint",
+                "count": "[length(parameters('endpoints'))]"
+              },
+              "type": "Microsoft.Network/privateEndpoints",
+              "apiVersion": "2023-04-01",
+              "name": "[parameters('endpoints')[copyIndex()].privateEndpoint]",
+              "location": "[parameters('location')]",
+              "properties": {
+                "subnet": {
+                  "id": "[parameters('subnetPrivateEndpointsId')]"
+                },
+                "privateLinkServiceConnections": [
+                  {
+                    "name": "[parameters('endpoints')[copyIndex()].privateLink]",
+                    "properties": {
+                      "privateLinkServiceId": "[parameters('endpoints')[copyIndex()].serviceId]",
+                      "groupIds": "[parameters('endpoints')[copyIndex()].groupIds]"
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "copy": {
+                "name": "privateDnsZone",
+                "count": "[length(parameters('endpoints'))]"
+              },
+              "type": "Microsoft.Network/privateDnsZones",
+              "apiVersion": "2020-06-01",
+              "name": "[parameters('endpoints')[copyIndex()].dnsZoneName]",
+              "location": "global",
+              "properties": {}
+            },
+            {
+              "copy": {
+                "name": "privateDnsZoneLink",
+                "count": "[length(parameters('endpoints'))]"
+              },
+              "type": "Microsoft.Network/privateDnsZones/virtualNetworkLinks",
+              "apiVersion": "2020-06-01",
+              "name": "[format('{0}/{1}', parameters('endpoints')[copyIndex()].dnsZoneName, format('{0}-link', parameters('endpoints')[copyIndex()].dnsZoneName))]",
+              "location": "global",
+              "properties": {
+                "registrationEnabled": false,
+                "virtualNetwork": {
+                  "id": "[parameters('vnetId')]"
+                }
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Network/privateDnsZones', parameters('endpoints')[copyIndex()].dnsZoneName)]"
+              ]
+            },
+            {
+              "copy": {
+                "name": "privateDnsGroup",
+                "count": "[length(parameters('endpoints'))]"
+              },
+              "type": "Microsoft.Network/privateEndpoints/privateDnsZoneGroups",
+              "apiVersion": "2023-04-01",
+              "name": "[format('{0}/{1}', parameters('endpoints')[copyIndex()].privateEndpoint, 'customdnsgroupname')]",
+              "properties": {
+                "privateDnsZoneConfigs": [
+                  {
+                    "name": "config",
+                    "properties": {
+                      "privateDnsZoneId": "[resourceId('Microsoft.Network/privateDnsZones', parameters('endpoints')[copyIndex()].dnsZoneName)]"
+                    }
+                  }
+                ]
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Network/privateDnsZones', parameters('endpoints')[copyIndex()].dnsZoneName)]",
+                "[resourceId('Microsoft.Network/privateEndpoints', parameters('endpoints')[copyIndex()].privateEndpoint)]"
+              ]
+            }
+          ]
+        }
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Resources/deployments', 'apimModule')]",
+        "[resourceId('Microsoft.Resources/deployments', 'networkModule')]"
+      ]
+    }
+  ]
+}
